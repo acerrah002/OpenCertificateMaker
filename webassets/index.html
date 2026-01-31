@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Logo Certificate Maker</title>
+    <style>
+        :root {
+            --gold: #c5a059;
+            --dark: #1a1a1a;
+            --sidebar-width: 350px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            display: flex;
+            background: #2d3136;
+            color: #333;
+        }
+
+        /* --- Sidebar UI --- */
+        .controls {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 2rem;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            left: 0; top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        h2 { margin-top: 0; color: var(--dark); font-size: 1.5rem; }
+
+        .input-group { 
+            margin-bottom: 1.2rem; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 15px; 
+        }
+        
+        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.85rem; }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .slider-row { display: flex; gap: 10px; align-items: center; margin-top: 5px; }
+        .slider-row label { margin-bottom: 0; width: 20px; }
+
+        .print-btn {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        /* --- Certificate Canvas --- */
+        .preview-area {
+            margin-left: var(--sidebar-width);
+            flex-grow: 1;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #525659;
+            padding: 40px;
+        }
+
+        .cert-card {
+            width: 1056px; 
+            height: 816px; 
+            background: white;
+            padding: 30px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .border-pattern {
+            border: 15px double var(--gold);
+            height: 100%;
+            padding: 40px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        #logoSection {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        .certLogo { 
+            background-image: url("GoldenStamp.png");
+            background-position: center; /* Centers PNG in div */
+            background-repeat: no-repeat; /* Prevents tiling */
+            background-size: contain;    /* Fits PNG to container */
+            
+            max-height: 180px; 
+            width: auto;
+            position: absolute;
+            pointer-events: auto;
+            transform: translate(-50%, 80%);
+            transition: outline 0.2s, transform 0.1s;
+            cursor: copy; /* Visual hint for file drop */
+        }
+
+        .certLogo.drag-over {
+            outline: 3px dashed var(--gold);
+            outline-offset: 10px;
+            background: rgba(197, 160, 89, 0.1);
+        }
+
+        /* Typography */
+        h1 { font-size: 70px; margin: 10px 0; color: var(--dark); letter-spacing: 8px; font-family: 'Times New Roman', serif; }
+        .subtitle { color: var(--gold); font-weight: bold; font-size: 1.2rem; text-transform: uppercase; }
+        #certName { font-size: 45px; font-family: 'Georgia', serif; font-style: italic; border-bottom: 2px solid #eee; display: inline-block; min-width: 60%; margin: 15px 0; }
+        .purpose-text { width: 75%; margin: 0 auto; line-height: 1.6; }
+
+        .footer { display: flex; justify-content: space-around; margin-top: 40px; }
+        .sig-block { border-top: 1px solid #333; width: 200px; padding-top: 8px; }
+
+        @media print {
+            .controls { display: none; }
+            .preview-area { margin: 0; padding: 0; background: white; }
+            .cert-card { box-shadow: none; width: 100%; height: 100%; }
+            * { -webkit-print-color-adjust: exact !important; }
+        }
+
+        /* Add this to your stylesheet */
+    .certLogo.disabled {
+    background-image: none !important;
+    }
+
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <h2>Certificate Designer</h2>
+    
+    <div class="input-group">
+        <label>Logo 1 (Drop image file on logo)</label>
+        <div class="slider-row"><label>X</label><input type="range" id="slideLogo1X" min="0" max="100" value="15"></div>
+        <div class="slider-row"><label>Y</label><input type="range" id="slideLogo1Y" min="0" max="100" value="15"></div>
+    </div>
+
+    <div class="input-group">
+        <label>Logo 2 (Drop image file on logo)</label>
+        <div class="slider-row"><label>X</label><input type="range" id="slideLogo2X" min="0" max="100" value="85"></div>
+        <div class="slider-row"><label>Y</label><input type="range" id="slideLogo2Y" min="0" max="100" value="15"></div>
+    </div>
+
+    <div class="input-group">
+    <button onclick="document.querySelectorAll('.certLogo').forEach(el => el.classList.toggle('disabled'))">
+        Toggle Stamp
+    </button>
+    </div>
+
+
+    <div class="input-group">
+        <label>Recipient Name</label>
+        <input type="text" id="inName" placeholder="Johnathan Doe">
+    </div>
+
+    <div class="input-group">
+        <label>Texts</label>
+        <textarea id="inReason" placeholder="Certification opening..."></textarea>
+        <textarea id="inPurpose" placeholder="Achievement details..."></textarea>
+    </div>
+
+    <div class="input-group">
+        <label>Issue Date & Signatory</label>
+        <input type="text" id="inDate" placeholder="October 24, 2024">
+        <input type="text" id="inSig" placeholder="Director Name">
+    </div>
+
+    <button onclick="window.print()" class="print-btn">Print to PDF</button>
+    <p style="font-size: 11px; color: #888; margin-top: 15px;">By: Henry Acerra Parera</p>
+</div>
+
+<div class="preview-area">
+    <div class="cert-card">
+        <div class="border-pattern">
+            <div id="logoSection">
+                <img src="wrench.png" id="certLogo1" alt="Logo 1" class="certLogo" style="left:15%; top:15%;">
+                <img src="wrench.png" id="certLogo2" alt="Logo 2" class="certLogo" style="left:85%; top:15%;">
+            </div>
+
+            <div class="cert-header">
+                <h1>CERTIFICATE</h1>
+                <p class="subtitle">OF COMPLETION</p>
+                <p id="certReason" style="font-size: 20px;">This is to certify that the individual named below has successfully completed the designated program.</p>
+            </div>
+
+            <div class="recipient-section">
+                <p class="text-mute">PROUDLY PRESENTED TO</p>
+                <h2 id="certName">Recipient Name</h2>
+            </div>
+            
+            <p class="purpose-text" id="certPurpose">For successfully meeting all professional requirements.</p>
+
+            <div class="footer">
+                <div class="sig-block"><p id="certDate">Jan 31, 2026</p><span>DATE</span></div>
+                <div class="sig-block"><p class="handwriting" id="certSig">Alex Rivera</p><span>AUTHORIZED SIGNATURE</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const logo1 = document.getElementById('certLogo1');
+    const logo2 = document.getElementById('certLogo2');
+
+    // --- FILE DROP LOGIC ---
+    [logo1, logo2].forEach(logo => {
+        logo.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            logo.classList.add('drag-over');
+        });
+
+        logo.addEventListener('dragleave', () => logo.classList.remove('drag-over'));
+
+        logo.addEventListener('drop', (e) => {
+            e.preventDefault();
+            logo.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (ev) => logo.src = ev.target.result;
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+
+    // --- SLIDER MOVEMENT LOGIC ---
+    const updatePos = (el, axis, val) => el.style[axis] = val + '%';
+
+    document.getElementById('slideLogo1X').oninput = (e) => updatePos(logo1, 'left', e.target.value);
+    document.getElementById('slideLogo1Y').oninput = (e) => updatePos(logo1, 'top', e.target.value);
+    document.getElementById('slideLogo2X').oninput = (e) => updatePos(logo2, 'left', e.target.value);
+    document.getElementById('slideLogo2Y').oninput = (e) => updatePos(logo2, 'top', e.target.value);
+
+    // --- TEXT UPDATE LOGIC ---
+    const inputs = {
+        'inName': 'certName', 'inReason': 'certReason', 
+        'inPurpose': 'certPurpose', 'inDate': 'certDate', 'inSig': 'certSig'
+    };
+
+    Object.keys(inputs).forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+            document.getElementById(inputs[id]).innerText = e.target.value || e.target.placeholder;
+        });
+    });
+</script>
+</body>
+</html>
